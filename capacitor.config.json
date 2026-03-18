@@ -1,0 +1,8 @@
+{
+  "appId": "com.sedomem.onequestion",
+  "appName": "One Question",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
