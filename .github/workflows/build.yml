@@ -1,46 +1,37 @@
 name: Build Signed AAB
-
 on:
   push:
     branches: [main]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Node.js Kur
         uses: actions/setup-node@v4
         with:
           node-version: 18
-
       - name: Java Kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-
       - name: Android SDK Kur
         uses: android-actions/setup-android@v3
-
       - name: Android 35 Platform Kur
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
+        run: |
+          sdkmanager --uninstall "platforms;android-35"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Bağımlılıkları Yükle
         run: npm install
-
       - name: Android Platform Ekle
         run: npx cap add android
-
       - name: API Düzeyi Güncelle
         run: |
           sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/' android/variables.gradle
           sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 35/' android/variables.gradle
-
       - name: Capacitor Sync
         run: npx cap sync android
-
       - name: Keystore Oluştur
         run: |
           keytool -genkey -v \
@@ -52,7 +43,6 @@ jobs:
             -storepass onequestion2024 \
             -keypass onequestion2024 \
             -dname "CN=One Question, OU=App, O=OneQuestion, L=Istanbul, ST=Istanbul, C=TR"
-
       - name: AAB İmzalı Derle
         run: |
           cd android
@@ -62,7 +52,6 @@ jobs:
             -Pandroid.injected.signing.store.password=onequestion2024 \
             -Pandroid.injected.signing.key.alias=onequestion \
             -Pandroid.injected.signing.key.password=onequestion2024
-
       - name: AAB İndir
         uses: actions/upload-artifact@v4
         with:
