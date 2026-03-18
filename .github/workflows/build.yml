@@ -24,6 +24,9 @@ jobs:
       - name: Bağımlılıkları Yükle
         run: npm install
 
+      - name: Android Platform Ekle
+        run: npx cap add android
+
       - name: Capacitor Sync
         run: npx cap sync android
 
