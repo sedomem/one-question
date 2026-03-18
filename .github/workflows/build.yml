@@ -18,18 +18,16 @@ jobs:
           java-version: 17
       - name: Android SDK Kur
         uses: android-actions/setup-android@v3
-      - name: Android 35 Platform Kur
-        run: |
-          sdkmanager --uninstall "platforms;android-35"
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Android 34 Platform Kur
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
       - name: Bağımlılıkları Yükle
         run: npm install
       - name: Android Platform Ekle
         run: npx cap add android
       - name: API Düzeyi Güncelle
         run: |
-          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/' android/variables.gradle
-          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 35/' android/variables.gradle
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 34/' android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 34/' android/variables.gradle
       - name: Capacitor Sync
         run: npx cap sync android
       - name: Keystore Oluştur
