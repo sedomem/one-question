@@ -27,6 +27,13 @@ jobs:
       - name: Android Platform Ekle
         run: npx cap add android
 
+      - name: API Düzeyi Güncelle
+        run: |
+          sed -i 's/compileSdkVersion = 33/compileSdkVersion = 35/' android/variables.gradle
+          sed -i 's/targetSdkVersion = 33/targetSdkVersion = 35/' android/variables.gradle
+          sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/' android/variables.gradle
+          sed -i 's/targetSdkVersion = 34/targetSdkVersion = 35/' android/variables.gradle
+
       - name: Capacitor Sync
         run: npx cap sync android
 
@@ -48,12 +55,4 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
-            -Pandroid.injected.signing.store.password=onequestion2024 \
-            -Pandroid.injected.signing.key.alias=onequestion \
-            -Pandroid.injected.signing.key.password=onequestion2024
-
-      - name: AAB İndir
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-signed
-          path: android/app/build/outputs/bundle/release/app-release.aab
+            -Pand
