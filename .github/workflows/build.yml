@@ -21,6 +21,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Android SDK 35 Kur
+        run: |
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - name: Bağımlılıkları Yükle
         run: npm install
 
@@ -29,10 +33,8 @@ jobs:
 
       - name: API Düzeyi Güncelle
         run: |
-          sed -i 's/compileSdkVersion = 33/compileSdkVersion = 35/' android/variables.gradle
-          sed -i 's/targetSdkVersion = 33/targetSdkVersion = 35/' android/variables.gradle
-          sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/' android/variables.gradle
-          sed -i 's/targetSdkVersion = 34/targetSdkVersion = 35/' android/variables.gradle
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/' android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 35/' android/variables.gradle
 
       - name: Capacitor Sync
         run: npx cap sync android
@@ -55,4 +57,12 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
-            -Pand
+            -Pandroid.injected.signing.store.password=onequestion2024 \
+            -Pandroid.injected.signing.key.alias=onequestion \
+            -Pandroid.injected.signing.key.password=onequestion2024
+
+      - name: AAB İndir
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-signed
+          path: android/app/build/outputs/bundle/release/app-release.aab
