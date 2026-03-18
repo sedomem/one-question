@@ -21,9 +21,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Android SDK 35 Kur
-        run: |
-          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Android SDK Kur
+        uses: android-actions/setup-android@v3
+
+      - name: Android 35 Platform Kur
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Bağımlılıkları Yükle
         run: npm install
