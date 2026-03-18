@@ -21,11 +21,16 @@ jobs:
       - name: Android 35 Platform Kur
         run: |
           rm -rf $ANDROID_HOME/platforms/android-35
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platforms;android-35" "build-tools;35.0.1"
       - name: Bağımlılıkları Yükle
         run: npm install
       - name: Android Platform Ekle
         run: npx cap add android
+      - name: AGP ve Gradle Güncelle
+        run: |
+          sed -i "s/classpath 'com.android.tools.build:gradle:[^']*'/classpath 'com.android.tools.build:gradle:8.7.2'/" android/build.gradle
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip|' android/gradle/wrapper/gradle-wrapper.properties
+          echo "android.aapt2FromMavenOverride=$ANDROID_HOME/build-tools/35.0.1/aapt2" >> android/gradle.properties
       - name: API Düzeyi Güncelle
         run: |
           sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/' android/variables.gradle
