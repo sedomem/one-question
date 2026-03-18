@@ -1,4 +1,4 @@
-name: Build AAB
+name: Build Signed AAB
 
 on:
   push:
@@ -30,14 +30,30 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      - name: AAB Derle
+      - name: Keystore Oluştur
+        run: |
+          keytool -genkey -v \
+            -keystore android/app/release.keystore \
+            -alias onequestion \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass onequestion2024 \
+            -keypass onequestion2024 \
+            -dname "CN=One Question, OU=App, O=OneQuestion, L=Istanbul, ST=Istanbul, C=TR"
+
+      - name: AAB İmzalı Derle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=app/release.keystore \
+            -Pandroid.injected.signing.store.password=onequestion2024 \
+            -Pandroid.injected.signing.key.alias=onequestion \
+            -Pandroid.injected.signing.key.password=onequestion2024
 
       - name: AAB İndir
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: app-signed
           path: android/app/build/outputs/bundle/release/app-release.aab
