@@ -11,10 +11,12 @@
 <title>One Question</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -140,6 +142,9 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
 .map-back{background:none;border:none;border-radius:50%;padding:8px;color:#fff;cursor:pointer;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
 .map-title{flex:1;color:#fff;font-weight:800;font-size:16px;text-align:center}
 .map-area{flex:1;position:relative;overflow:hidden}
+#leaflet-map{position:absolute;inset:0;z-index:1}
+#leaflet-map .leaflet-control-zoom{border:none!important;box-shadow:0 2px 8px rgba(0,0,0,.4)!important}
+#leaflet-map .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;width:32px!important;height:32px!important;line-height:32px!important}
 .map-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,#1B3A5C,#0D1B2A 70%)}
 .map-tabs{display:flex;gap:6px;padding:8px 12px;background:rgba(10,22,40,.9);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
 .mtab{flex:1;padding:8px;background:rgba(255,255,255,.06);border:none;border-radius:10px;color:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;min-height:44px}
@@ -195,7 +200,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
 #s-success{background:var(--bg);align-items:center;justify-content:center}
 
 /* ─── MODALS ─── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(4px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal-box{background:var(--surface);border-radius:var(--r3) var(--r3) 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);padding-bottom:calc(24px + var(--sb));border-top:1px solid var(--border)}
 .modal-overlay.open .modal-box{transform:translateY(0)}
@@ -244,8 +249,8 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
 .acc-head .acc-title{flex:1;font-size:15px;font-weight:600;color:var(--text)}
 .acc-head .acc-arrow{font-size:16px;color:var(--text3);transition:transform .25s;flex-shrink:0}
 .acc-item.open .acc-arrow{transform:rotate(90deg)}
-.acc-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
-.acc-item.open .acc-body{max-height:3000px}
+.acc-body{display:none}
+.acc-item.open .acc-body{display:block}
 .acc-content{padding:0 16px 16px;font-size:13px;color:var(--text2);line-height:1.8}
 .acc-content h4{font-size:14px;font-weight:700;color:var(--white);margin:14px 0 6px}
 .acc-content h4:first-child{margin-top:0}
@@ -259,11 +264,6 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
 <div id="offline-screen"><span style="font-size:64px">📡</span><div style="font-size:22px;font-weight:800;color:var(--white)">Bağlantı Yok</div><div style="font-size:14px;color:var(--text2);line-height:1.6;max-width:280px" id="offline-msg">İnternet bağlantısı gerekli. Lütfen bağlantınızı kontrol edin.</div><button class="btn sec" style="width:auto;padding:0 24px;margin-top:8px" onclick="location.reload()">🔄 Tekrar Dene</button></div>
 <div id="loading"><div class="loader"></div><p style="color:var(--text3);font-size:14px" id="load-txt">Yükleniyor...</p></div>
 <div id="toast"></div>
-
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-terms"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="terms-title"></h3><button class="modal-close" onclick="closeModal('modal-terms')">✕</button></div><div class="modal-body" id="terms-body"></div></div></div>
-<div class="modal-overlay" id="modal-privacy"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="privacy-title"></h3><button class="modal-close" onclick="closeModal('modal-privacy')">✕</button></div><div class="modal-body" id="privacy-body"></div></div></div>
-<div class="modal-overlay" id="modal-streak"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="streak-modal-title"></h3><button class="modal-close" onclick="closeModal('modal-streak')">✕</button></div><div class="modal-body" id="streak-modal-body"></div></div></div>
 
 <!-- SPLASH -->
 <div class="screen active" id="s-splash">
@@ -410,10 +410,11 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
   </div>
 
   <nav class="navbar">
-    <button class="ni on" onclick="go('s-home')"><span class="ic">🏠</span><span class="lb" id="nb-home"></span></button>
-    <button class="ni" onclick="go('s-map')"><span class="ic">🌍</span><span class="lb" id="nb-map"></span></button>
-    <button class="ni" onclick="go('s-explore')"><span class="ic">📚</span><span class="lb" id="nb-exp"></span></button>
-    <button class="ni" onclick="go('s-profile')"><span class="ic">👤</span><span class="lb" id="nb-prof"></span></button>
+    <button class="ni on" onclick="go('s-home')"><span class="ic">🏠</span><span class="lb" id="nb-home">Ana Sayfa</span></button>
+    <button class="ni" onclick="go('s-map')"><span class="ic">🌍</span><span class="lb" id="nb-map">Dünya</span></button>
+    <button class="ni" onclick="go('s-stats')"><span class="ic">📊</span><span class="lb" id="nb-stats">İstatistik</span></button>
+    <button class="ni" onclick="go('s-explore')"><span class="ic">📚</span><span class="lb" id="nb-exp">Keşfet</span></button>
+    <button class="ni" onclick="go('s-profile')"><span class="ic">👤</span><span class="lb" id="nb-prof">Profil</span></button>
   </nav>
 </div>
 
@@ -476,47 +477,47 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
     <button style="background:var(--p);border:none;border-radius:50%;width:40px;height:40px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="go('s-share')">📤</button>
   </div>
   <div class="map-tabs">
-    <button class="mtab on" id="tab-pins" onclick="setMapTab('pins')"></button>
-    <button class="mtab" id="tab-heat" onclick="setMapTab('heat')"></button>
+    <button class="mtab on" id="tab-pins" onclick="setMapTab('pins')">📍 Pinler</button>
+    <button class="mtab" id="tab-heat" onclick="setMapTab('heat')">🌡 Isı</button>
+    <button class="mtab" id="tab-mapstats" onclick="setMapTab('mapstats')">📊 İstatistik</button>
   </div>
   <div class="map-area" id="map-area">
-    <div class="map-bg"></div>
-    <svg viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%">
-      <rect width="360" height="180" fill="#0D2137"/>
-      <g fill="#1B3A5C" stroke="#0D2137" stroke-width=".5">
-        <ellipse id="c-US" cx="75" cy="72" rx="28" ry="18"/><ellipse id="c-CA" cx="75" cy="52" rx="25" ry="12"/>
-        <ellipse id="c-MX" cx="72" cy="90" rx="14" ry="8"/><ellipse id="c-BR" cx="105" cy="125" rx="18" ry="22"/>
-        <ellipse id="c-AR" cx="100" cy="152" rx="10" ry="15"/><ellipse id="c-GB" cx="172" cy="62" rx="5" ry="6"/>
-        <ellipse id="c-FR" cx="180" cy="68" rx="6" ry="6"/><ellipse id="c-DE" cx="188" cy="62" rx="6" ry="6"/>
-        <ellipse id="c-ES" cx="175" cy="76" rx="7" ry="5"/><ellipse id="c-IT" cx="190" cy="75" rx="4" ry="8"/>
-        <ellipse id="c-RU" cx="240" cy="55" rx="48" ry="18"/><ellipse id="c-TR" cx="210" cy="78" rx="10" ry="5"/>
-        <ellipse id="c-EG" cx="205" cy="93" rx="8" ry="6"/><ellipse id="c-NG" cx="188" cy="118" rx="8" ry="7"/>
-        <ellipse id="c-ZA" cx="198" cy="148" rx="9" ry="8"/><ellipse id="c-KE" cx="212" cy="125" rx="7" ry="7"/>
-        <ellipse id="c-SA" cx="220" cy="90" rx="10" ry="8"/><ellipse id="c-IN" cx="248" cy="98" rx="14" ry="16"/>
-        <ellipse id="c-CN" cx="270" cy="80" rx="22" ry="16"/><ellipse id="c-JP" cx="300" cy="72" rx="6" ry="10"/>
-        <ellipse id="c-KR" cx="292" cy="76" rx="4" ry="5"/><ellipse id="c-ID" cx="284" cy="120" rx="16" ry="6"/>
-        <ellipse id="c-AU" cx="300" cy="138" rx="18" ry="13"/>
-      </g>
-    </svg>
-    <div style="position:absolute;top:10px;right:10px;background:rgba(10,22,40,.85);border-radius:12px;padding:8px 12px;z-index:5;border:1px solid rgba(255,255,255,.1)">
+    <div id="leaflet-map" style="position:absolute;inset:0;z-index:1"></div>
+    <!-- Map Stats Overlay -->
+    <div id="map-stats-overlay" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(10,22,40,.95);overflow-y:auto;padding:16px">
+      <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:14px">🌍 Dünya İstatistikleri</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(255,255,255,.1)"><div style="font-size:24px;font-weight:900;color:var(--p)" id="ms-total">—</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Toplam Cevap</div></div>
+        <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:14px;text-align:center;border:1px solid rgba(255,255,255,.1)"><div style="font-size:24px;font-weight:900;color:#22C55E" id="ms-countries">—</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">Ülke</div></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Duygu Dağılımı</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <div style="flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#22C55E" id="ms-happy">—</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">😊 Mutlu</div></div>
+        <div style="flex:1;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#60A5FA" id="ms-sad">—</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">😢 Üzgün</div></div>
+        <div style="flex:1;background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#94A3B8" id="ms-neutral">—</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">😐 Nötr</div></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Ülkelere Göre</div>
+      <div id="ms-country-list"></div>
+    </div>
+    <div style="position:absolute;top:10px;right:10px;background:rgba(10,22,40,.85);border-radius:12px;padding:8px 12px;z-index:400;border:1px solid rgba(255,255,255,.1)">
       <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:700;margin-bottom:4px" id="leg-title"></div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.8);margin-bottom:3px"><div style="width:9px;height:9px;border-radius:50%;background:#22C55E;flex-shrink:0"></div><span id="leg-happy"></span></div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.8);margin-bottom:3px"><div style="width:9px;height:9px;border-radius:50%;background:#60A5FA;flex-shrink:0"></div><span id="leg-sad"></span></div>
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.8)"><div style="width:9px;height:9px;border-radius:50%;background:#94A3B8;flex-shrink:0"></div><span id="leg-neutral"></span></div>
     </div>
-    <div id="map-pins"></div>
-    <div class="map-counter" id="map-cnt"></div>
-    <div class="map-popup" id="map-popup">
+    <div class="map-counter" id="map-cnt" style="z-index:400"></div>
+    <div class="map-popup" id="map-popup" style="z-index:500">
       <div class="popup-handle" onclick="closePopup()"></div>
       <div class="popup-title"><span id="popup-flag">🌍</span><span id="popup-country-name"></span><span id="popup-cnt-badge" style="font-size:12px;color:var(--p);font-weight:700;background:var(--p-dim);border:1px solid var(--p-glow);padding:3px 9px;border-radius:20px;margin-left:4px"></span></div>
       <div class="popup-list" id="popup-list"></div>
     </div>
   </div>
   <nav class="map-navbar">
-    <button class="map-ni" onclick="go('s-home')"><span class="ic">🏠</span><span class="lb" id="mn-home"></span></button>
-    <button class="map-ni on"><span class="ic">🌍</span><span class="lb" id="mn-map"></span></button>
-    <button class="map-ni" onclick="go('s-explore')"><span class="ic">📚</span><span class="lb" id="mn-exp"></span></button>
-    <button class="map-ni" onclick="go('s-profile')"><span class="ic">👤</span><span class="lb" id="mn-prof"></span></button>
+    <button class="map-ni" onclick="go('s-home')"><span class="ic">🏠</span><span class="lb" id="mn-home">Ana Sayfa</span></button>
+    <button class="map-ni on"><span class="ic">🌍</span><span class="lb" id="mn-map">Dünya</span></button>
+    <button class="map-ni" onclick="go('s-stats')"><span class="ic">📊</span><span class="lb">İstatistik</span></button>
+    <button class="map-ni" onclick="go('s-explore')"><span class="ic">📚</span><span class="lb" id="mn-exp">Keşfet</span></button>
+    <button class="map-ni" onclick="go('s-profile')"><span class="ic">👤</span><span class="lb" id="mn-prof">Profil</span></button>
   </nav>
 </div>
 
@@ -543,6 +544,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
       <div style="flex:1"><div style="font-weight:700;font-size:15px;color:var(--white)" id="sh-invite-lbl"></div><div style="font-size:12px;color:var(--text3);margin-top:2px" id="sh-invite-sub"></div></div>
       <span style="color:var(--text3);font-size:18px">›</span>
     </div>
+    <button class="btn sec" style="margin-top:14px" onclick="go('s-home')">🏠 <span id="sh-home-btn">Ana Sayfa</span></button>
   </div>
 </div>
 
@@ -620,6 +622,48 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
   </div>
 </div>
 
+<!-- STATS -->
+<div class="screen" id="s-stats">
+  <div class="topbar"><button class="back" onclick="goBack()">← </button><div class="ttl">📊 İstatistikler</div></div>
+  <div class="scroll-body" style="display:flex;flex-direction:column;gap:12px">
+    <!-- Streak Card -->
+    <div class="card" style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:42px">🔥</div>
+      <div>
+        <div style="font-size:36px;font-weight:900;color:var(--p)" id="stat-streak">0</div>
+        <div style="font-size:14px;font-weight:700;color:var(--white)" id="stat-streak-lbl">Günlük Seri</div>
+        <div style="font-size:12px;color:var(--text3)" id="stat-best-streak">En uzun: 0 gün</div>
+      </div>
+    </div>
+    <!-- Grid stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card" style="text-align:center;padding:18px">
+        <div style="font-size:28px;margin-bottom:4px">✍️</div>
+        <div style="font-size:28px;font-weight:900;color:var(--white)" id="stat-total">0</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="stat-total-lbl">Toplam Cevap</div>
+      </div>
+      <div class="card" style="text-align:center;padding:18px">
+        <div style="font-size:28px;margin-bottom:4px">❤️</div>
+        <div style="font-size:28px;font-weight:900;color:var(--white)" id="stat-hearts">0</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="stat-hearts-lbl">Alınan Beğeni</div>
+      </div>
+      <div class="card" style="text-align:center;padding:18px">
+        <div style="font-size:28px;margin-bottom:4px">🌍</div>
+        <div style="font-size:28px;font-weight:900;color:var(--white)" id="stat-countries">0</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="stat-countries-lbl">Ülkeden Cevap</div>
+      </div>
+      <div class="card" style="text-align:center;padding:18px">
+        <div style="font-size:28px;margin-bottom:4px">💡</div>
+        <div style="font-size:28px;font-weight:900;color:var(--white)" id="stat-suggests">0</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="stat-suggests-lbl">Soru Önerim</div>
+      </div>
+    </div>
+    <!-- Badges -->
+    <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:4px" id="stat-badges-lbl">Rozetler</div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px" id="stat-badges-grid"></div>
+  </div>
+</div>
+
 <!-- SETTINGS -->
 <div class="screen" id="s-settings">
   <div class="topbar"><button class="back" onclick="goBack()" id="set-back">← </button><div class="ttl" id="set-ttl"></div></div>
@@ -635,232 +679,22 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
       <div class="field"><label id="set-nk-lbl"></label><input type="text" id="set-nk-in" maxlength="20"></div>
       <button class="btn" style="min-height:44px;font-size:15px" onclick="changeNick()" id="set-nk-btn"></button>
     </div>
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:4px 4px 8px" id="set-about-lbl"></div>
-    <div class="set-list">
-      <div class="set-row" onclick="openModal('modal-terms')"><span style="font-size:20px;width:24px;text-align:center">📋</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-terms">Kullanım Koşulları</span><span style="color:var(--text3);font-size:16px">›</span></div>
-      <div class="set-row" onclick="openModal('modal-privacy')"><span style="font-size:20px;width:24px;text-align:center">🛡</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-privacy">Gizlilik Politikası</span><span style="color:var(--text3);font-size:16px">›</span></div>
-      <div class="set-row" onclick="openStreakModal()"><span style="font-size:20px;width:24px;text-align:center">🔥</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-streak-menu">Seri Rozetleri</span><span style="color:var(--text3);font-size:16px">›</span></div>
-      <div class="set-row" onclick="goSuggest()"><span style="font-size:20px;width:24px;text-align:center">💡</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-suggest">Soru Öner</span><span style="color:var(--text3);font-size:16px">›</span></div>
-      <div class="set-row" onclick="go('s-gdpr')"><span style="font-size:20px;width:24px;text-align:center">🍪</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-gdpr">Gizlilik Tercihleri</span><span style="color:var(--text3);font-size:16px">›</span></div>
-      <div class="set-row" id="notif-row" onclick="requestNotifPermission()"><span style="font-size:20px;width:24px;text-align:center">🔔</span><span style="flex:1;font-size:15px;font-weight:500;color:var(--text)" id="set-notif-lbl">Bildirim Ayarları</span><span id="notif-status" style="font-size:12px;font-weight:600;color:var(--text3);margin-right:4px"></span><span style="color:var(--text3);font-size:16px">›</span></div>
+    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;padding:4px 4px 8px" id="set-about-lbl">HAKKINDA</div>
+    <div style="background:#1e2d38;border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid #2a3a48">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openModal('modal-terms')"><span style="font-size:20px;width:28px;text-align:center">📋</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-terms">Kullanım Koşulları</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openModal('modal-privacy')"><span style="font-size:20px;width:28px;text-align:center">🛡️</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-privacy">Gizlilik Politikası</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openStreakModal()"><span style="font-size:20px;width:28px;text-align:center">🔥</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-streak-menu">Seri Rozetleri</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="goSuggest()"><span style="font-size:20px;width:28px;text-align:center">💡</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-suggest">Soru Öner</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="go('s-gdpr')"><span style="font-size:20px;width:28px;text-align:center">🍪</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-gdpr">Gizlilik Tercihleri</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;min-height:52px" onclick="requestNotifPermission()"><span style="font-size:20px;width:28px;text-align:center">🔔</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="set-notif-lbl">Bildirim Ayarları</span><span id="notif-status" style="font-size:12px;font-weight:600;color:#64748b;margin-right:4px"></span><span style="color:#64748b;font-size:18px">›</span></div>
     </div>
 
-    <!-- HUKUKI METİNLER -->
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:4px 4px 8px;margin-top:8px" id="set-legal-lbl">Hukuki Metinler</div>
-
-    <!-- 1. Gizlilik İlkesi -->
-    <div class="acc-item" onclick="toggleAcc(this)">
-      <div class="acc-head">
-        <span class="acc-icon">🔐</span>
-        <span class="acc-title" id="legal-privacy-title">Gizlilik İlkesi</span>
-        <span class="acc-arrow">›</span>
-      </div>
-      <div class="acc-body"><div class="acc-content" id="legal-privacy-body">
-        <h4>1. Giriş</h4>
-        One Question ("Uygulama"), kullanıcılarının gizliliğine büyük önem vermektedir. Bu Gizlilik İlkesi, kişisel verilerinizin nasıl toplandığını, işlendiğini ve korunduğunu açıklamaktadır.
-
-        <h4>2. Veri Sorumlusu</h4>
-        <strong>Uygulama Adı:</strong> One Question<br>
-        <strong>İletişim:</strong> privacy@onequest.app<br>
-        <strong>Web:</strong> onequest.app
-
-        <h4>3. Toplanan Veriler</h4>
-        <ul>
-          <li><strong>Rumuz:</strong> Kullanıcı tarafından serbestçe belirlenen takma ad. Gerçek kimlik bilgisi talep edilmez.</li>
-          <li><strong>Ülke Kodu:</strong> Harita özelliği için kullanılan ülke bilgisi (ör. TR, US).</li>
-          <li><strong>Anonim Cevaplar:</strong> Günlük sorulara verilen yanıtlar.</li>
-          <li><strong>Duygu Analizi:</strong> Cevapların otomatik olarak mutlu/üzgün/nötr kategorilerine ayrılması.</li>
-          <li><strong>Firebase Anonim UID:</strong> Kimlik doğrulama için otomatik oluşturulan benzersiz tanımlayıcı.</li>
-          <li><strong>Cihaz Tercihleri:</strong> Dil seçimi ve seri sayacı (yalnızca cihazda localStorage'da saklanır).</li>
-        </ul>
-
-        <h4>4. Toplanmayan Veriler</h4>
-        <ul>
-          <li>Ad, soyad, e-posta adresi, telefon numarası</li>
-          <li>GPS veya IP tabanlı hassas konum bilgisi</li>
-          <li>Fotoğraf, kişi listesi, dosyalar</li>
-          <li>Finansal veya ödeme bilgileri</li>
-          <li>Cihaz tanımlayıcıları (IMEI, reklam kimliği vb.)</li>
-        </ul>
-
-        <h4>5. Verilerin Kullanım Amaçları</h4>
-        <ul>
-          <li>Dünya haritasında anonim cevapların gösterilmesi</li>
-          <li>Günlük soru-cevap istatistiklerinin oluşturulması</li>
-          <li>İçerik moderasyonu ve uygunsuz içerik filtreleme</li>
-          <li>Uygulama içi bildirim gönderimi</li>
-        </ul>
-
-        <h4>6. Veri Paylaşımı</h4>
-        Kullanıcı verileri üçüncü taraflara <strong>satılmaz</strong> ve pazarlama amacıyla paylaşılmaz. Firebase (Google LLC) yalnızca altyapı hizmet sağlayıcı olarak kullanılmaktadır. Anonim cevaplar, uygulama içinde diğer kullanıcılara gösterilir.
-
-        <h4>7. Veri Güvenliği</h4>
-        <ul>
-          <li>Tüm veri aktarımı HTTPS/TLS ile şifrelenir</li>
-          <li>Firebase güvenlik kuralları ile yetkisiz erişim engellenir</li>
-          <li>Veriler Google Cloud altyapısında güvenli sunucularda barındırılır</li>
-        </ul>
-
-        <h4>8. Çerezler ve Yerel Depolama</h4>
-        Uygulama HTTP çerezleri kullanmaz. Dil tercihi, seri sayacı gibi ayarlar yalnızca cihazın localStorage'ında tutulur ve sunucuya iletilmez.
-
-        <h4>9. Değişiklikler</h4>
-        Bu ilke güncellenebilir. Güncel versiyon her zaman uygulama içinden erişilebilir.<br>
-        <strong>Son güncelleme:</strong> Mart 2026
-      </div></div>
-    </div>
-
-    <!-- 2. KVKK Aydınlatma Metni -->
-    <div class="acc-item" onclick="toggleAcc(this)">
-      <div class="acc-head">
-        <span class="acc-icon">📜</span>
-        <span class="acc-title" id="legal-kvkk-title">KVKK Aydınlatma Metni</span>
-        <span class="acc-arrow">›</span>
-      </div>
-      <div class="acc-body"><div class="acc-content" id="legal-kvkk-body">
-        <h4>6698 Sayılı Kişisel Verilerin Korunması Kanunu Kapsamında Aydınlatma Metni</h4>
-
-        One Question uygulaması olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında veri sorumlusu sıfatıyla aşağıdaki hususları bilginize sunarız.
-
-        <h4>1. Veri Sorumlusunun Kimliği</h4>
-        <strong>Uygulama:</strong> One Question<br>
-        <strong>İletişim:</strong> privacy@onequest.app
-
-        <h4>2. İşlenen Kişisel Veriler</h4>
-        <ul>
-          <li><strong>Kimlik Verisi:</strong> Rumuz (takma ad)</li>
-          <li><strong>Konum Verisi:</strong> Ülke kodu (hassas konum bilgisi toplanmaz)</li>
-          <li><strong>Kullanıcı İşlem Verisi:</strong> Günlük sorulara verilen anonim cevaplar, duygu analizi sonucu, seri sayacı</li>
-          <li><strong>İşlem Güvenliği Verisi:</strong> Firebase anonim kullanıcı kimliği (UID)</li>
-        </ul>
-
-        <h4>3. Kişisel Verilerin İşlenme Amaçları</h4>
-        <ul>
-          <li>Uygulama hizmetlerinin sunulması ve iyileştirilmesi</li>
-          <li>Dünya haritasında anonim içeriklerin gösterilmesi</li>
-          <li>İstatistiksel analizlerin oluşturulması</li>
-          <li>İçerik moderasyonu ve güvenliğin sağlanması</li>
-          <li>Uygulama içi bildirimlerin iletilmesi</li>
-        </ul>
-
-        <h4>4. Kişisel Verilerin Aktarılması</h4>
-        Kişisel verileriniz; uygulamanın teknik altyapısını sağlayan Firebase (Google LLC, ABD) platformuna aktarılmaktadır. Google, AB-ABD Veri Gizliliği Çerçevesi kapsamında yeterli koruma sağlamaktadır. Verileriniz pazarlama amacıyla üçüncü taraflarla paylaşılmaz.
-
-        <h4>5. Kişisel Veri Toplamanın Yöntemi ve Hukuki Sebebi</h4>
-        Kişisel verileriniz, uygulama aracılığıyla elektronik ortamda, <strong>açık rızanıza</strong> dayalı olarak toplanmaktadır (KVKK m.5/1). Uygulama ilk kullanımda GDPR/KVKK onay ekranı sunulmakta ve onayınız alınmaktadır.
-
-        <h4>6. Veri Sahibinin Hakları (KVKK m.11)</h4>
-        KVKK'nın 11. maddesi uyarınca aşağıdaki haklara sahipsiniz:
-        <ul>
-          <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
-          <li>Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme</li>
-          <li>İşlenme amacını ve bunların amacına uygun kullanılıp kullanılmadığını öğrenme</li>
-          <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme</li>
-          <li>Eksik veya yanlış işlenmiş olması hâlinde düzeltilmesini isteme</li>
-          <li>KVKK m.7 kapsamında silinmesini veya yok edilmesini isteme</li>
-          <li>Düzeltme, silme veya yok etme işlemlerinin aktarılan üçüncü kişilere bildirilmesini isteme</li>
-          <li>İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme</li>
-          <li>Kanuna aykırı olarak işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme</li>
-        </ul>
-        Haklarınızı kullanmak için: <strong>privacy@onequest.app</strong>
-
-        <h4>7. Veri Saklama Süresi</h4>
-        Kişisel verileriniz, hesabınız aktif olduğu sürece saklanır. Hesabınızı sildiğinizde (Ayarlar → Hesabımı Sil) tüm kişisel verileriniz kalıcı olarak silinir.
-      </div></div>
-    </div>
-
-    <!-- 3. Hukuki Aydınlatma Metni -->
-    <div class="acc-item" onclick="toggleAcc(this)">
-      <div class="acc-head">
-        <span class="acc-icon">⚖️</span>
-        <span class="acc-title" id="legal-terms-title">Hukuki Aydınlatma Metni</span>
-        <span class="acc-arrow">›</span>
-      </div>
-      <div class="acc-body"><div class="acc-content" id="legal-terms-body">
-        <h4>1. Taraflar</h4>
-        İşbu metin, One Question uygulamasını ("Uygulama") kullanan gerçek kişi ("Kullanıcı") ile Uygulama sahibi arasındaki hukuki ilişkiyi düzenler.
-
-        <h4>2. Hizmetin Tanımı</h4>
-        One Question, kullanıcılara her gün tek bir soru yönelten ve dünya genelindeki yanıtları anonim olarak haritada gösteren bir sosyal içerik platformudur. Uygulama ücretsiz olarak sunulmaktadır.
-
-        <h4>3. Kullanıcı Yükümlülükleri</h4>
-        <ul>
-          <li>Uygulamayı hukuka ve ahlaka aykırı amaçlarla kullanmamayı,</li>
-          <li>Üçüncü kişilerin haklarını ihlal edecek içerik paylaşmamayı,</li>
-          <li>Küfür, nefret söylemi, şiddet içerikli, cinsel, ırkçı veya ayrımcı ifadeler kullanmamayı,</li>
-          <li>Spam, reklam veya yanıltıcı bilgi paylaşmamayı,</li>
-          <li>13 yaşından büyük olduğunu teyit etmeyi kabul ve taahhüt eder.</li>
-        </ul>
-
-        <h4>4. Fikri Mülkiyet Hakları</h4>
-        Uygulama tasarımı, logosu, adı ve tüm içeriği One Question'a aittir. Kullanıcı tarafından gönderilen cevaplar, uygulama içinde anonim olarak görüntülenmek üzere lisanslanır. Kullanıcı, gönderdiği içeriğin kendi özgün çalışması olduğunu beyan eder.
-
-        <h4>5. Kullanıcı İçeriği (UGC) Politikası</h4>
-        <ul>
-          <li>Kullanıcı cevapları otomatik içerik moderasyonuna tabi tutulur</li>
-          <li>Uygunsuz bulunan içerikler kaldırılır</li>
-          <li>Tekrarlayan ihlallerde hesap askıya alınabilir</li>
-          <li>Diğer kullanıcılar uygunsuz içeriği raporlayabilir</li>
-        </ul>
-
-        <h4>6. Sorumluluk Sınırlandırması</h4>
-        <ul>
-          <li>Uygulama "olduğu gibi" (as-is) sunulmaktadır</li>
-          <li>Kullanıcı içeriklerinin doğruluğu garanti edilmez</li>
-          <li>Üçüncü taraf bağlantılarından doğan zararlardan sorumluluk kabul edilmez</li>
-          <li>Teknik arıza, bakım veya mücbir sebeplerden kaynaklanan kesintiler için sorumluluk kabul edilmez</li>
-        </ul>
-
-        <h4>7. Hesap Askıya Alma ve Fesih</h4>
-        Uygulama, kullanım koşullarını ihlal eden hesapları önceden bildirimle veya acil durumlarda bildirimsiz askıya alma veya kalıcı olarak kapatma hakkını saklı tutar.
-
-        <h4>8. Uygulanacak Hukuk</h4>
-        İşbu metin Türkiye Cumhuriyeti hukukuna tabidir. Uyuşmazlıklarda Türkiye Cumhuriyeti mahkemeleri yetkilidir.
-
-        <h4>9. Değişiklikler</h4>
-        Bu metin güncellenebilir. Güncel versiyonu uygulama içinden erişilebilir durumdadır.<br>
-        <strong>Son güncelleme:</strong> Mart 2026
-      </div></div>
-    </div>
-
-    <!-- 4. Açık Rıza Metni -->
-    <div class="acc-item" onclick="toggleAcc(this)">
-      <div class="acc-head">
-        <span class="acc-icon">✅</span>
-        <span class="acc-title" id="legal-consent-title">Açık Rıza Metni</span>
-        <span class="acc-arrow">›</span>
-      </div>
-      <div class="acc-body"><div class="acc-content" id="legal-consent-body">
-        <h4>Kişisel Verilerin İşlenmesine İlişkin Açık Rıza Beyanı</h4>
-
-        One Question uygulamasının KVKK Aydınlatma Metni'ni okudum ve anladım. Bu kapsamda;
-
-        <h4>1. Açık Rıza Verilen İşlemler</h4>
-        Aşağıda belirtilen kişisel verilerimin, belirtilen amaçlarla işlenmesine <strong>özgür iradem ile açık rızam</strong> bulunmaktadır:
-        <ul>
-          <li><strong>Rumuz bilgimin</strong> uygulama içinde diğer kullanıcılara gösterilmesi</li>
-          <li><strong>Ülke kodum bilgimin</strong> dünya haritasında anonim olarak işlenmesi</li>
-          <li><strong>Günlük sorulara verdiğim cevapların</strong> anonim olarak diğer kullanıcılara gösterilmesi ve istatistiksel amaçlarla işlenmesi</li>
-          <li><strong>Cevaplarımın duygu analizine</strong> (mutlu/üzgün/nötr) tabi tutulması</li>
-          <li><strong>Firebase anonim kimlik bilgimin</strong> oluşturulması ve işlenmesi</li>
-          <li><strong>Kişisel verilerimin Firebase (Google LLC) sunucularında</strong> yurt dışında barındırılması</li>
-        </ul>
-
-        <h4>2. Rıza Beyanı</h4>
-        Yukarıda belirtilen kişisel verilerimin, KVKK Aydınlatma Metni'nde açıklanan amaçlar ve kapsamda işlenmesine, Firebase (Google LLC) platformuna aktarılmasına ve yurt dışında depolanmasına, 6698 sayılı Kanun'un 5/1. maddesi uyarınca <strong>açık rızam</strong> ile onay veriyorum.
-
-        <h4>3. Rızanın Geri Alınması</h4>
-        Açık rızamı her zaman, herhangi bir gerekçe göstermeksizin geri alma hakkına sahibim. Rızamı geri almak için:
-        <ul>
-          <li><strong>Ayarlar → Hesabımı ve Verilerimi Sil</strong> seçeneğini kullanarak hesabımı ve tüm verilerimi silebilirim</li>
-          <li><strong>privacy@onequest.app</strong> adresine e-posta göndererek rızamı geri çekebilirim</li>
-        </ul>
-        Rızanın geri alınması, geri alma tarihine kadar yapılan veri işleme faaliyetlerinin hukuka uygunluğunu etkilemez.
-
-        <h4>4. Onay Tarihi</h4>
-        İşbu açık rıza beyanı, uygulamaya ilk kayıt sırasında GDPR/KVKK onay ekranında "Kabul Et" butonuna basılması ile verilmiş sayılır.<br><br>
-        <strong>Son güncelleme:</strong> Mart 2026
-      </div></div>
+    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;padding:4px 4px 8px" id="set-legal-lbl">HUKUKİ METİNLER</div>
+    <div style="background:#1e2d38;border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid #2a3a48">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openLegalModal('privacy')"><span style="font-size:20px;width:28px;text-align:center">🔐</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="legal-privacy-title">Gizlilik İlkesi</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openLegalModal('kvkk')"><span style="font-size:20px;width:28px;text-align:center">📜</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="legal-kvkk-title">KVKK Aydınlatma Metni</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #2a3a48;cursor:pointer;min-height:52px" onclick="openLegalModal('legal')"><span style="font-size:20px;width:28px;text-align:center">⚖️</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="legal-terms-title">Hukuki Aydınlatma Metni</span><span style="color:#64748b;font-size:18px">›</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;min-height:52px" onclick="openLegalModal('consent')"><span style="font-size:20px;width:28px;text-align:center">✅</span><span style="flex:1;font-size:15px;font-weight:500;color:#e8edf2" id="legal-consent-title">Açık Rıza Metni</span><span style="color:#64748b;font-size:18px">›</span></div>
     </div>
 
     <!-- DANGER ZONE -->
@@ -880,6 +714,12 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',-apple-syst
 </div>
 
 </div><!-- #app -->
+
+<!-- MODALS (outside #app to avoid overflow:hidden clipping in WebView) -->
+<div class="modal-overlay" id="modal-terms"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="terms-title"></h3><button class="modal-close" onclick="closeModal('modal-terms')">✕</button></div><div class="modal-body" id="terms-body"></div></div></div>
+<div class="modal-overlay" id="modal-privacy"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="privacy-title"></h3><button class="modal-close" onclick="closeModal('modal-privacy')">✕</button></div><div class="modal-body" id="privacy-body"></div></div></div>
+<div class="modal-overlay" id="modal-streak"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="streak-modal-title"></h3><button class="modal-close" onclick="closeModal('modal-streak')">✕</button></div><div class="modal-body" id="streak-modal-body"></div></div></div>
+<div class="modal-overlay" id="modal-legal"><div class="modal-box"><div class="modal-handle"></div><div class="modal-hdr"><h3 id="legal-modal-title"></h3><button class="modal-close" onclick="closeModal('modal-legal')">✕</button></div><div class="modal-body" id="legal-modal-body" style="line-height:1.9"></div></div></div>
 
 <script>
 firebase.initializeApp({apiKey:"AIzaSyAfC9O9Wt_6VZCel9P6CMUlOaKScXowMeU",authDomain:"one-question-8e3bc.firebaseapp.com",projectId:"one-question-8e3bc",storageBucket:"one-question-8e3bc.firebasestorage.app",messagingSenderId:"4603457953",appId:"1:4603457953:web:d26c47589086ab78559be0"});
@@ -985,6 +825,12 @@ function go(id){
   document.querySelectorAll('.screen').forEach(s=>{if(s.id!=='s-invite')s.classList.remove('active');});
   const el=document.getElementById(id);
   if(el)el.classList.add('active');
+  // Update navbar active state
+  const navMap={'s-home':0,'s-map':1,'s-stats':2,'s-explore':3,'s-profile':4};
+  const navIdx=navMap[id];
+  if(navIdx!==undefined){
+    document.querySelectorAll('.navbar .ni').forEach((btn,i)=>{btn.classList.toggle('on',i===navIdx);});
+  }
   if(id==='s-map')loadMap();
   if(id==='s-explore')loadExplore();
   if(id==='s-profile')renderProfile();
@@ -992,11 +838,12 @@ function go(id){
   if(id==='s-share')renderShare();
   if(id==='s-ans')resetAnsScreen();
   if(id==='s-results')loadPollResults();
+  if(id==='s-stats')loadStats();
 }
 function goBack(){go(prevScreen||'s-home');}
 
 // ═══ LANGUAGE ═══
-function setLang(l){lang=l;lsSet('oq_lang',l);applyTranslations();updateLangButtons();showToast(l==='TR'?'🇹🇷 Türkçe':'🇺🇸 English','def',1800);}
+function setLang(l){lang=l;lsSet('oq_lang',l);applyTranslations();updateLangButtons();showToast(l==='TR'?'🇹🇷 Türkçe':'🇺🇸 English','def',1800);fetchQuestion();}
 function updateLangButtons(){document.getElementById('lb-tr').classList.toggle('on',lang==='TR');document.getElementById('lb-en').classList.toggle('on',lang==='EN');}
 function applyTranslations(){
   setText('sp-slogan',t('slogan'));setText('ob-skip',t('ob_skip'));
@@ -1036,9 +883,29 @@ function applyTranslations(){
   setText('terms-title',t('set_terms'));setText('privacy-title',t('set_privacy'));
   // New strings
   const ageLbl=document.getElementById('age-lbl');if(ageLbl)ageLbl.textContent=t('age_confirm');
-  setText('set-delete-lbl',t('delete_btn'));setText('delete-warn-txt',t('delete_warn'));setText('delete-cancel-btn',t('delete_cancel'));
-  setText('set-danger-lbl',t('danger_lbl'));
+  setText('set-delete-lbl',lang==='TR'?'Hesabımı ve Verilerimi Sil':'Delete My Account & Data');
+  setText('delete-warn-txt',lang==='TR'?'Bu işlem geri alınamaz. Tüm cevaplarınız, profiliniz ve verileriniz kalıcı olarak silinecektir.':'This action cannot be undone. All your answers, profile and data will be permanently deleted.');
+  setText('delete-cancel-btn',lang==='TR'?'İptal':'Cancel');
+  setText('set-danger-lbl',lang==='TR'?'Tehlikeli Bölge':'Danger Zone');
+  setText('set-notif-lbl',lang==='TR'?'Bildirim Ayarları':'Notification Settings');
+  // Share page
+  setText('sh-home-btn',lang==='TR'?'Ana Sayfa':'Home');
   updateSuggestVisibility();
+  // Stats labels
+  setText('stat-streak-lbl',lang==='TR'?'Günlük Seri':'Daily Streak');
+  setText('stat-total-lbl',lang==='TR'?'Toplam Cevap':'Total Answers');
+  setText('stat-hearts-lbl',lang==='TR'?'Alınan Beğeni':'Likes Received');
+  setText('stat-countries-lbl',lang==='TR'?'Ülkeden Cevap':'Countries');
+  setText('stat-suggests-lbl',lang==='TR'?'Soru Önerim':'My Suggestions');
+  setText('stat-badges-lbl',lang==='TR'?'Rozetler':'Badges');
+  setText('nb-stats',lang==='TR'?'İstatistik':'Stats');
+  // Legal section
+  setText('set-legal-lbl',lang==='TR'?'Hukuki Metinler':'Legal');
+  setText('legal-privacy-title',lang==='TR'?'Gizlilik İlkesi':'Privacy Principles');
+  setText('legal-kvkk-title',lang==='TR'?'KVKK Aydınlatma Metni':'KVKK Disclosure');
+  setText('legal-terms-title',lang==='TR'?'Hukuki Aydınlatma Metni':'Legal Disclosure');
+  setText('legal-consent-title',lang==='TR'?'Açık Rıza Metni':'Consent Statement');
+  setText('set-danger-lbl',lang==='TR'?'Tehlikeli Bölge':'Danger Zone');
   updateHomeAnsweredState();updateHdrStreak();
 }
 
@@ -1056,7 +923,20 @@ function acceptGDPR(){lsSet('oq_gdpr','1');if(!nickname)go('s-ob');else{go('s-ho
 function rejectGDPR(){lsSet('oq_gdpr','0');if(!nickname)go('s-ob');else{go('s-home');fetchQuestion();}}
 
 // ═══ STREAK ═══
-function updateStreak(){const last=lsGet('oq_last_ans_date');if(last===TODAY)return;const prev=new Date(TODAY);prev.setDate(prev.getDate()-1);streak=(last===prev.toISOString().split('T')[0])?streak+1:1;lsSet('oq_streak',streak);updateHdrStreak();}
+function updateStreak(){
+  const last=lsGet('oq_last_ans_date');
+  if(last===TODAY)return;
+  if(!last){streak=1;}
+  else{
+    const prev=new Date(TODAY);prev.setDate(prev.getDate()-1);
+    const prevStr=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0')+'-'+String(prev.getDate()).padStart(2,'0');
+    streak=(last===prevStr)?streak+1:1;
+  }
+  lsSet('oq_streak',streak);
+  const best=parseInt(lsGet('oq_best_streak')||'0');
+  if(streak>best)lsSet('oq_best_streak',streak);
+  updateHdrStreak();
+}
 function updateHdrStreak(){
   const btn=document.getElementById('hdr-streak-btn');
   if(btn)btn.innerHTML='🌍';
@@ -1217,11 +1097,11 @@ async function submitAns(){
     await db.collection('answers').add({
       text,nickname:nickname||'anonim',question_id:TODAY,
       timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-      country:'TR',uid:auth.currentUser?.uid||null,
+      country:userCountryCode||'TR',city:userCity||'',uid:auth.currentUser?.uid||null,
       status:'approved',sentiment,hearts:0,
       vote_option:isPoll?text:null,question_type:currentQType
     });
-    markAnsweredToday(text);updateStreak();
+    updateStreak();markAnsweredToday(text);syncStreakToFirestore();
     let rewardMsg='';
     if(streak===7)rewardMsg=t('streak_7');else if(streak===30)rewardMsg=t('streak_30');else if(streak===100)rewardMsg=t('streak_100');
     setText('suc-ttl',t('suc_ttl'));setText('suc-sub',t('suc_sub'));setText('suc-pill',t('suc_pill'));
@@ -1278,40 +1158,84 @@ function renderResultBars(containerId,opts,answers){
   setTimeout(()=>{el.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.getAttribute('data-w')+'%');},100);
 }
 
-// ═══ MAP ═══
-const MAP_POS=[{x:48,y:38},{x:52,y:30},{x:22,y:40},{x:28,y:58},{x:72,y:34},{x:65,y:42},{x:18,y:50},{x:58,y:52},{x:80,y:50},{x:42,y:26},{x:36,y:44},{x:55,y:28}];
-const MAP_FLAGS=['🇹🇷','🇩🇪','🇺🇸','🇧🇷','🇯🇵','🇮🇳','🇲🇽','🇰🇪','🇦🇺','🇸🇪','🇫🇷','🇷🇺'];
+// ═══ MAP (Leaflet) ═══
+let leafletMap=null,mapMarkers=[];
+const COUNTRY_LATLNG={TR:{lat:39.9,lng:32.8},US:{lat:39.8,lng:-98.5},DE:{lat:51.1,lng:10.4},BR:{lat:-14.2,lng:-51.9},JP:{lat:36.2,lng:138.2},IN:{lat:20.5,lng:78.9},MX:{lat:23.6,lng:-102.5},KE:{lat:-0.02,lng:37.9},AU:{lat:-25.2,lng:133.7},FR:{lat:46.2,lng:2.2},GB:{lat:55.3,lng:-3.4},RU:{lat:61.5,lng:105.3},CN:{lat:35.8,lng:104.1},KR:{lat:35.9,lng:127.7},ZA:{lat:-30.5,lng:22.9},AR:{lat:-38.4,lng:-63.6},SA:{lat:23.8,lng:45.0},ID:{lat:-0.7,lng:113.9}};
+function initLeafletMap(){
+  if(leafletMap)return;
+  leafletMap=L.map('leaflet-map',{zoomControl:false,attributionControl:false,minZoom:2,maxZoom:6}).setView([20,30],2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(leafletMap);
+  L.control.zoom({position:'bottomright'}).addTo(leafletMap);
+}
 async function loadMap(){
-  const pinsEl=document.getElementById('map-pins');pinsEl.innerHTML='';
+  initLeafletMap();
+  mapMarkers.forEach(m=>leafletMap.removeLayer(m));mapMarkers=[];
   document.getElementById('map-popup').classList.remove('open');
   try{
     const snap=await db.collection('answers').where('question_id','==',TODAY).where('status','in',['approved','pending']).orderBy('timestamp','desc').limit(40).get();
     allAnswers=[];snap.forEach(doc=>allAnswers.push({id:doc.id,...doc.data()}));
     setText('map-cnt','🌍 '+allAnswers.length.toLocaleString()+' '+t('map_cnt'));
-    if(mapTab==='pins')renderPins();else renderHeatmap();
-  }catch(e){console.error(e);renderFallbackPins();}
+    renderLeafletPins();
+  }catch(e){console.error(e);allAnswers=FALLBACK_ANS;renderLeafletPins();}
+  setTimeout(()=>{if(leafletMap)leafletMap.invalidateSize();},300);
 }
-function setMapTab(tab){mapTab=tab;document.getElementById('tab-pins').classList.toggle('on',tab==='pins');document.getElementById('tab-heat').classList.toggle('on',tab==='heat');if(tab==='pins')renderPins();else renderHeatmap();}
-function renderPins(){
-  const pinsEl=document.getElementById('map-pins');pinsEl.innerHTML='';
-  document.querySelectorAll('[id^="c-"]').forEach(el=>{el.style.fill='#1B3A5C';el.style.opacity='.15';el.onclick=null;el.style.cursor='default';});
-  const pin=getStreakPin();const answers=allAnswers.length>0?allAnswers:FALLBACK_ANS;
-  answers.forEach((ans,i)=>{
-    const ckeys=Object.keys(COUNTRY_DATA);const ckey=ans.country&&COUNTRY_DATA[ans.country]?ans.country:ckeys[i%ckeys.length];
-    const cd=COUNTRY_DATA[ckey];const color=sentimentColor(ans.sentiment);const isMine=ans.nickname===nickname;
-    const el=document.createElement('div');el.className='map-pin';el.style.cssText='left:'+cd.cx+'%;top:'+cd.cy+'%;animation:popIn .4s '+(i*40)+'ms ease both';
-    const bubble=document.createElement('div');bubble.className='pin-b'+(isMine?' mine':'');bubble.style.background=isMine?'var(--earth)':color;bubble.textContent=isMine?pin.icon:cd.flag;
-    bubble.onclick=(e)=>{e.stopPropagation();openCountryPopup(ckey);};el.appendChild(bubble);pinsEl.appendChild(el);
+function setMapTab(tab){
+  mapTab=tab;
+  document.getElementById('tab-pins').classList.toggle('on',tab==='pins');
+  document.getElementById('tab-heat').classList.toggle('on',tab==='heat');
+  document.getElementById('tab-mapstats').classList.toggle('on',tab==='mapstats');
+  var overlay=document.getElementById('map-stats-overlay');
+  if(tab==='mapstats'){
+    overlay.style.display='block';
+    renderMapStats();
+  }else{
+    overlay.style.display='none';
+    renderLeafletPins();
+  }
+}
+function renderMapStats(){
+  var answers=allAnswers.length>0?allAnswers:FALLBACK_ANS;
+  var countries={},sentiments={happy:0,sad:0,neutral:0};
+  answers.forEach(function(a){
+    var c=a.country||'TR';
+    if(!countries[c])countries[c]={count:0,flag:COUNTRY_DATA[c]?COUNTRY_DATA[c].flag:'🌍',name:COUNTRY_DATA[c]?COUNTRY_DATA[c].name:c};
+    countries[c].count++;
+    sentiments[a.sentiment||'neutral']++;
+  });
+  setText('ms-total',answers.length);
+  setText('ms-countries',Object.keys(countries).length);
+  setText('ms-happy',sentiments.happy);
+  setText('ms-sad',sentiments.sad);
+  setText('ms-neutral',sentiments.neutral);
+  var list=document.getElementById('ms-country-list');
+  list.innerHTML='';
+  var sorted=Object.values(countries).sort(function(a,b){return b.count-a.count;});
+  sorted.forEach(function(c){
+    var pct=Math.round(c.count/answers.length*100);
+    list.innerHTML+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:10px;margin-bottom:6px;border:1px solid rgba(255,255,255,.06)"><span style="font-size:22px">'+c.flag+'</span><span style="flex:1;font-size:14px;font-weight:600;color:#e2e8f0">'+c.name+'</span><span style="font-size:14px;font-weight:800;color:#3caff6">'+c.count+'</span><span style="font-size:11px;color:#8899aa;width:36px;text-align:right">'+pct+'%</span></div>';
   });
 }
-function renderHeatmap(){
-  const pinsEl=document.getElementById('map-pins');pinsEl.innerHTML='';
-  const counts={};const answers=allAnswers.length>0?allAnswers:FALLBACK_ANS;
-  answers.forEach(a=>{const c=a.country||'TR';counts[c]=(counts[c]||0)+1;});
-  const maxCount=Math.max(...Object.values(counts),1);
-  document.querySelectorAll('[id^="c-"]').forEach(el=>{el.style.fill='#1B3A5C';el.style.opacity='.15';});
-  Object.entries(counts).forEach(([code,cnt])=>{const el=document.getElementById('c-'+code);if(!el)return;const intensity=cnt/maxCount;const r=Math.round(30+intensity*200),g=Math.round(144+intensity*50),b=Math.round(255-intensity*100);el.style.fill='rgb('+r+','+g+','+b+')';el.style.opacity=String(.2+intensity*.7);el.style.cursor='pointer';el.onclick=()=>openCountryPopup(code);});
+function renderLeafletPins(){
+  mapMarkers.forEach(m=>leafletMap.removeLayer(m));mapMarkers=[];
+  const answers=allAnswers.length>0?allAnswers:FALLBACK_ANS;
+  const pin=getStreakPin();
+  // Group by country
+  const grouped={};
+  answers.forEach(a=>{const c=a.country||'TR';if(!grouped[c])grouped[c]=[];grouped[c].push(a);});
+  Object.entries(grouped).forEach(([code,ans])=>{
+    const ll=COUNTRY_LATLNG[code];if(!ll)return;
+    const cd=COUNTRY_DATA[code];if(!cd)return;
+    const isMine=ans.some(a=>a.nickname===nickname);
+    const mainSentiment=ans[0]?.sentiment||'neutral';
+    const color=mapTab==='heat'?getHeatColor(ans.length,answers.length):sentimentColor(mainSentiment);
+    const size=mapTab==='heat'?Math.max(20,Math.min(50,ans.length*8)):30;
+    const icon=L.divIcon({className:'',html:`<div style="background:${isMine?'var(--earth)':color};color:#fff;font-size:${size>35?'16px':'13px'};border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.3);box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer;font-weight:700${isMine?';animation:bounce .8s infinite':''}">${isMine?pin.icon:cd.flag}</div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
+    const marker=L.marker([ll.lat+(Math.random()-.5)*2,ll.lng+(Math.random()-.5)*2],{icon}).addTo(leafletMap);
+    marker.on('click',()=>openCountryPopup(code));
+    mapMarkers.push(marker);
+  });
 }
+function getHeatColor(count,total){const i=Math.min(count/(total||1)*3,1);return `rgb(${Math.round(60+i*195)},${Math.round(175-i*100)},${Math.round(246-i*200)})`;}
 function openCountryPopup(countryCode){
   const cd=COUNTRY_DATA[countryCode];if(!cd)return;
   setText('popup-flag',cd.flag);setText('popup-country-name',cd.name);
@@ -1327,10 +1251,8 @@ function openCountryPopup(countryCode){
   document.getElementById('map-popup').classList.add('open');
 }
 function closePopup(){document.getElementById('map-popup').classList.remove('open');}
-document.getElementById('map-area').onclick=(e)=>{if(e.target===e.currentTarget||e.target.id==='map-area')closePopup();};
 async function upvote(docId,btn){btn.textContent='❤️';btn.disabled=true;try{await db.collection('answers').doc(docId).update({hearts:firebase.firestore.FieldValue.increment(1)});btn.nextElementSibling.textContent=parseInt(btn.nextElementSibling.textContent||0)+1;totalHearts++;lsSet('oq_hearts',totalHearts);}catch(e){btn.textContent='🤍';btn.disabled=false;}}
 const FALLBACK_ANS=[{id:'f1',nickname:'gezgin42',text:'Kahvem ☕',sentiment:'happy',country:'TR',hearts:12},{id:'f2',nickname:'berlinlu',text:'Güneş 🌞',sentiment:'happy',country:'DE',hearts:8},{id:'f3',nickname:'ny_girl',text:'My dog 🐶',sentiment:'happy',country:'US',hearts:21},{id:'f4',nickname:'samba99',text:'Música 🎶',sentiment:'neutral',country:'BR',hearts:5},{id:'f5',nickname:'tokyo_k',text:'桜 🌸',sentiment:'happy',country:'JP',hearts:17},{id:'f6',nickname:'nairobi1',text:'Sunrise 🌅',sentiment:'neutral',country:'KE',hearts:3}];
-function renderFallbackPins(){allAnswers=FALLBACK_ANS;renderPins();setText('map-cnt','🌍 Demo');}
 
 // ═══ INSTAGRAM CARD ═══
 function openInstagramCard(){updateIGCard();go('s-instagram');}
@@ -1378,9 +1300,85 @@ function shareToSocial(platform){
   else if(platform==='copy'){navigator.clipboard&&navigator.clipboard.writeText(url);showToast(t('toast_copied'),'suc');}
 }
 
-// ═══ EXPLORE ═══
-const EXPLORE_DATA=[{date:'2026-03-14',q_TR:'Bugün seni en çok ne mutlu etti?',q_EN:'What made you happiest today?',chips:['😊 happy','🌍 12K']},{date:'2026-03-13',q_TR:'Başarı mı huzur mu?',q_EN:'Success or peace?',chips:['📊 poll','🌍 9K']},{date:'2026-03-12',q_TR:'Bu hafta öğrendiğin en ilginç şey?',q_EN:'Most interesting thing you learned?',chips:['😊 happy','🌍 15K']},{date:'2026-03-11',q_TR:'Seni en çok ne şaşırtıyor?',q_EN:'What surprises you most?',chips:['💭 neutral','🌍 8K']},{date:'2026-03-10',q_TR:'Dünyanın en büyük sorunu ne?',q_EN:"World's biggest problem?",chips:['😢 sad','🌍 18K']}];
-function loadExplore(){const el=document.getElementById('explore-list');el.innerHTML='';EXPLORE_DATA.forEach(item=>{const div=document.createElement('div');div.className='exp-item fade-up';div.innerHTML='<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px">'+item.date+'</div><div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:8px">"'+(lang==='TR'?item.q_TR:item.q_EN)+'"</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+item.chips.map(c=>'<span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 10px;color:var(--text3)">'+c+'</span>').join('')+'</div>';el.appendChild(div);});}
+// ═══ EXPLORE (Firestore) ═══
+async function loadExplore(){
+  const el=document.getElementById('explore-list');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ Yükleniyor...</div>';
+  try{
+    // Get last 15 days of questions
+    const dates=[];const d=new Date();
+    for(let i=0;i<15;i++){dates.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));d.setDate(d.getDate()-1);}
+    const snap=await db.collection('questions').where('date','in',dates.slice(0,10)).get();
+    const questions=[];snap.forEach(doc=>questions.push({id:doc.id,...doc.data()}));
+    questions.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    el.innerHTML='';
+    if(questions.length===0){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">'+(lang==='TR'?'Henüz geçmiş soru yok.':'No past questions yet.')+'</div>';return;}
+    for(const q of questions){
+      // Get answer count for this question
+      let cnt=0;try{const as=await db.collection('answers').where('question_id','==',q.date).get();cnt=as.size;}catch(e){}
+      const qText=lang==='TR'?(q.text_TR||q.text||'—'):(q.text_EN||q.text||'—');
+      const typeChip=q.type==='poll'?'📊 Anket':'💬 Metin';
+      const div=document.createElement('div');div.className='exp-item fade-up';div.style.cursor='pointer';
+      div.innerHTML=`<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px">${q.date}</div><div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:8px">"${qText}"</div><div style="display:flex;flex-wrap:wrap;gap:6px"><span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 10px;color:var(--text3)">${typeChip}</span><span style="font-size:12px;background:var(--bg2);border-radius:8px;padding:4px 10px;color:var(--text3)">🌍 ${cnt}</span></div>`;
+      div.onclick=()=>showExplorePopup(q.date,qText,cnt);
+      el.appendChild(div);
+    }
+  }catch(e){
+    console.error(e);
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">'+e.message+'</div>';
+  }
+}
+async function showExplorePopup(dateId,qText,total){
+  let body='<div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px">"'+qText+'"</div><div style="font-size:12px;color:var(--text3);margin-bottom:12px">📅 '+dateId+' · 🌍 '+total+' cevap</div>';
+  try{
+    const snap=await db.collection('answers').where('question_id','==',dateId).orderBy('hearts','desc').limit(10).get();
+    if(!snap.empty){
+      body+='<div style="font-size:13px;font-weight:600;color:var(--p);margin-bottom:8px">'+(lang==='TR'?'En beğenilen cevaplar:':'Top answers:')+'</div>';
+      snap.forEach(doc=>{
+        const d=doc.data();
+        const sc=sentimentColor(d.sentiment);
+        body+=`<div style="background:var(--bg2);border-radius:var(--r);padding:10px 14px;margin-bottom:6px;border-left:3px solid ${sc}"><div style="font-size:12px;color:var(--text3);margin-bottom:3px">@${d.nickname} · ❤️ ${d.hearts||0}</div><div style="font-size:14px;color:var(--white);line-height:1.4">${d.text}</div></div>`;
+      });
+    }else{body+='<div style="color:var(--text3);font-size:13px">'+(lang==='TR'?'Bu soruya henüz cevap yok.':'No answers yet.')+'</div>';}
+  }catch(e){body+='<div style="color:var(--text3);font-size:13px">'+e.message+'</div>';}
+  openModal('modal-terms');
+  document.getElementById('terms-title').textContent=lang==='TR'?'Geçmiş Soru':'Past Question';
+  document.getElementById('terms-body').innerHTML=body;
+}
+
+// ═══ STATS ═══
+async function loadStats(){
+  setText('stat-streak',streak);
+  const best=parseInt(lsGet('oq_best_streak')||'0');
+  setText('stat-best-streak',(lang==='TR'?'En uzun: ':'Longest: ')+Math.max(best,streak)+(lang==='TR'?' gün':' days'));
+  setText('stat-total',totalAns);
+  setText('stat-hearts',totalHearts);
+  // Count countries and suggestions from Firestore
+  try{
+    const uid=auth.currentUser?.uid;
+    if(uid){
+      const anSnap=await db.collection('answers').where('uid','==',uid).get();
+      const countries=new Set();let hearts=0;
+      anSnap.forEach(d=>{const data=d.data();if(data.country)countries.add(data.country);hearts+=(data.hearts||0);});
+      setText('stat-countries',countries.size);
+      setText('stat-hearts',hearts);
+      totalHearts=hearts;lsSet('oq_hearts',hearts);
+      totalAns=anSnap.size;lsSet('oq_total',totalAns);
+      setText('stat-total',totalAns);
+    }
+    const sugSnap=await db.collection('suggestions').where('nickname','==',nickname).get();
+    setText('stat-suggests',sugSnap.size);
+  }catch(e){
+    setText('stat-countries','—');setText('stat-suggests','—');
+  }
+  // Badges
+  const badges=[];
+  badges.push({ic:'🔥',lbl:lang==='TR'?'Turuncu Pin':'Orange Pin',desc:lang==='TR'?'7 gün':'7 days',done:streak>=7});
+  badges.push({ic:'⭐',lbl:lang==='TR'?'Gümüş':'Silver',desc:lang==='TR'?'30 gün':'30 days',done:streak>=30});
+  badges.push({ic:'🏆',lbl:lang==='TR'?'Altın':'Gold',desc:lang==='TR'?'100 gün':'100 days',done:streak>=100});
+  const grid=document.getElementById('stat-badges-grid');
+  grid.innerHTML=badges.map(b=>`<div style="min-width:100px;background:var(--surface);border:1px solid ${b.done?'rgba(34,197,94,.3)':'var(--border)'};border-radius:var(--r2);padding:14px;text-align:center;flex-shrink:0"><div style="font-size:32px;margin-bottom:6px">${b.ic}</div><div style="font-size:13px;font-weight:700;color:var(--white)">${b.lbl}</div><div style="font-size:11px;color:${b.done?'var(--success)':'var(--text3)'};margin-top:4px">${b.done?(lang==='TR'?'✅ Kazanıldı':'✅ Earned'):b.desc}</div></div>`).join('');
+}
 
 // ═══ PROFILE ═══
 function renderProfile(){
@@ -1453,7 +1451,7 @@ async function deleteAccount(){
       try{await auth.currentUser.delete();}catch(e){console.warn('Auth delete:',e);}
     }
     // Clear all local data
-    ['oq_nick','oq_lang','oq_streak','oq_total','oq_hearts','oq_last_ans_date','oq_my_last_ans','oq_gdpr','oq_last_notif','oq_age_confirmed'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    ['oq_nick','oq_lang','oq_streak','oq_total','oq_hearts','oq_last_ans_date','oq_my_last_ans','oq_gdpr','oq_last_notif','oq_age_confirmed','oq_best_streak'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
     nickname='';streak=0;totalAns=0;totalHearts=0;
     showToast(t('delete_done'),'suc',4000);
     setTimeout(()=>{go('s-ob');},1500);
@@ -1554,15 +1552,18 @@ async function checkNotifications(){
   }catch(e){console.warn('Notification check failed:',e);}
 }
 
-// ═══ ACCORDION ═══
-function toggleAcc(el){
-  const wasOpen=el.classList.contains('open');
-  // Close all others
-  el.parentElement.querySelectorAll('.acc-item.open').forEach(a=>{if(a!==el)a.classList.remove('open');});
-  // Toggle clicked
-  el.classList.toggle('open',!wasOpen);
-  // Scroll into view if opening
-  if(!wasOpen)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+// ═══ LEGAL MODALS ═══
+const LEGAL_TEXTS={
+privacy:{title_TR:'Gizlilik İlkesi',title_EN:'Privacy Principles',body:'<h4>1. Giriş</h4>One Question, kullanıcılarının gizliliğine büyük önem verir.<h4>2. Veri Sorumlusu</h4><strong>Uygulama:</strong> One Question<br><strong>İletişim:</strong> privacy@onequest.app<h4>3. Toplanan Veriler</h4><ul><li><strong>Rumuz</strong> — gerçek kimlik talep edilmez</li><li><strong>Ülke/Şehir</strong> — harita için</li><li><strong>Anonim cevaplar</strong></li><li><strong>Duygu analizi</strong></li><li><strong>Firebase Auth UID</strong></li></ul><h4>4. Toplanmayan</h4>Ad, soyad, e-posta, telefon, GPS hassas konum, fotoğraf, finansal bilgi<h4>5. Güvenlik</h4>HTTPS/TLS şifreleme. Firebase güvenlik kuralları.<h4>6. Çerezler</h4>HTTP çerezleri kullanılmaz. Ayarlar cihazda tutulur.<br><strong>Güncelleme:</strong> Mart 2026'},
+kvkk:{title_TR:'KVKK Aydınlatma Metni',title_EN:'KVKK Disclosure',body:'<h4>6698 Sayılı KVKK Kapsamında Aydınlatma</h4><h4>1. Veri Sorumlusu</h4>One Question — privacy@onequest.app<h4>2. İşlenen Veriler</h4><ul><li><strong>Kimlik:</strong> Rumuz</li><li><strong>Konum:</strong> Ülke/şehir kodu</li><li><strong>İşlem:</strong> Anonim cevaplar, duygu analizi</li><li><strong>Güvenlik:</strong> Firebase UID</li></ul><h4>3. Amaçlar</h4><ul><li>Hizmet sunumu</li><li>Haritada anonim içerik</li><li>İstatistik</li><li>Moderasyon ve güvenlik</li></ul><h4>4. Aktarım</h4>Firebase (Google LLC, ABD) — AB-ABD Veri Gizliliği Çerçevesi<h4>5. Hukuki Sebep</h4>KVKK m.5/1 — açık rıza<h4>6. Haklarınız (m.11)</h4><ul><li>Verilerin işlenip işlenmediğini öğrenme</li><li>Bilgi talep etme</li><li>Amacına uygunluk kontrolü</li><li>Aktarılan üçüncü kişileri bilme</li><li>Düzeltme isteme</li><li>Silme isteme (Ayarlar → Hesabımı Sil)</li><li>İtiraz hakkı</li><li>Zarar giderilmesi talebi</li></ul>İletişim: privacy@onequest.app'},
+legal:{title_TR:'Hukuki Aydınlatma Metni',title_EN:'Legal Disclosure',body:'<h4>1. Taraflar</h4>One Question kullanıcısı ile Uygulama sahibi arasındaki hukuki ilişki.<h4>2. Hizmet</h4>Her gün tek soru yönelten, yanıtları anonim haritada gösteren ücretsiz platform.<h4>3. Yükümlülükler</h4><ul><li>Hukuka aykırı kullanmamak</li><li>Küfür, nefret söylemi, şiddet paylaşmamak</li><li>Spam ve yanıltıcı bilgi paylaşmamak</li><li>13 yaşından büyük olmak</li></ul><h4>4. Fikri Mülkiyet</h4>Tasarım, logo ve içerik One Question\'a aittir.<h4>5. UGC Politikası</h4>Otomatik moderasyon, uygunsuz içerik kaldırma, tekrar ihlalde hesap askıya alma.<h4>6. Sorumluluk</h4>Uygulama "olduğu gibi" sunulur.<h4>7. Hukuk</h4>TC hukukuna tabidir.<br>Güncelleme: Mart 2026'},
+consent:{title_TR:'Açık Rıza Metni',title_EN:'Consent Statement',body:'<h4>Açık Rıza Beyanı</h4>KVKK Aydınlatma Metnini okudum.<h4>1. Rıza Verilen İşlemler</h4><ul><li>Rumuz bilgimin gösterilmesi</li><li>Ülke/şehir bilgimin haritada işlenmesi</li><li>Cevaplarımın anonim gösterilmesi</li><li>Duygu analizine tabi tutulması</li><li>Firebase anonim kimliğimin oluşturulması</li><li>Verilerin Firebase (Google LLC) sunucularında saklanması</li></ul><h4>2. Beyan</h4>KVKK m.5/1 uyarınca <strong>açık rızam</strong> ile onay veriyorum.<h4>3. Geri Alma</h4><ul><li>Ayarlar → Hesabımı Sil</li><li>privacy@onequest.app</li></ul>Güncelleme: Mart 2026'}
+};
+function openLegalModal(key){
+  const d=LEGAL_TEXTS[key];if(!d)return;
+  document.getElementById('legal-modal-title').textContent=lang==='TR'?d.title_TR:d.title_EN;
+  document.getElementById('legal-modal-body').innerHTML=d.body;
+  document.getElementById('modal-legal').classList.add('open');
 }
 
 // ═══ MODALS ═══
@@ -1573,34 +1574,90 @@ function openModal(id){
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function openStreakModal(){
-  setText('streak-modal-title',t('set_streak_menu'));
-  document.getElementById('streak-modal-body').innerHTML='<div style="display:flex;flex-direction:column;gap:12px">'+[{days:7,ic:'🔥',lbl:lang==='TR'?'Turuncu Pin':'Orange Pin',desc:lang==='TR'?'7 gün üst üste':'7 days in a row'},{days:30,ic:'⭐',lbl:lang==='TR'?'Gümüş':'Silver',desc:lang==='TR'?'30 gün üst üste':'30 days in a row'},{days:100,ic:'🏆',lbl:lang==='TR'?'Altın Pin':'Gold Pin',desc:lang==='TR'?'100 gün üst üste':'100 days in a row'}].map(r=>'<div style="display:flex;align-items:center;gap:14px;padding:14px;background:'+(streak>=r.days?'rgba(34,197,94,.08)':'var(--bg2)')+';border-radius:14px;border:1px solid '+(streak>=r.days?'rgba(34,197,94,.2)':'var(--border)')+'"><div style="font-size:36px">'+r.ic+'</div><div style="flex:1"><div style="font-weight:700;font-size:15px;color:var(--white)">'+r.lbl+'</div><div style="font-size:13px;color:var(--text3);margin-top:2px">'+r.desc+'</div></div><div style="font-size:12px;font-weight:700;color:'+(streak>=r.days?'var(--success)':'var(--text3)')+'">'+(streak>=r.days?(lang==='TR'?'✅ Kazanıldı':'✅ Earned'):r.days+(lang==='TR'?' gün':' days'))+'</div></div>').join('')+'<div style="text-align:center;padding:8px;background:var(--bg2);border-radius:12px;font-size:14px;color:var(--text2)">'+(lang==='TR'?'Şu anki seri: <strong style="color:var(--orange)">'+streak+' gün 🔥</strong>':'Current streak: <strong style="color:var(--orange)">'+streak+' days 🔥</strong>')+'</div></div>';
+  setText('streak-modal-title',lang==='TR'?'Seri Rozetleri':'Streak Badges');
+  var h='<div style="display:flex;flex-direction:column;gap:12px">';
+  [{days:7,ic:'🔥',lbl:lang==='TR'?'Turuncu Pin':'Orange Pin',desc:lang==='TR'?'7 gün üst üste':'7 days in a row'},{days:30,ic:'⭐',lbl:lang==='TR'?'Gümüş':'Silver',desc:lang==='TR'?'30 gün':'30 days'},{days:100,ic:'🏆',lbl:lang==='TR'?'Altın Pin':'Gold Pin',desc:lang==='TR'?'100 gün':'100 days'}].forEach(function(r){
+    h+='<div style="display:flex;align-items:center;gap:14px;padding:14px;background:'+(streak>=r.days?'rgba(34,197,94,.08)':'var(--bg2)')+';border-radius:14px;border:1px solid '+(streak>=r.days?'rgba(34,197,94,.2)':'var(--border)')+'"><div style="font-size:36px">'+r.ic+'</div><div style="flex:1"><div style="font-weight:700;font-size:15px;color:var(--white)">'+r.lbl+'</div><div style="font-size:13px;color:var(--text3)">'+r.desc+'</div></div><div style="font-size:12px;font-weight:700;color:'+(streak>=r.days?'var(--success)':'var(--text3)')+'">'+(streak>=r.days?'✅':''+r.days)+'</div></div>';
+  });
+  h+='<div style="text-align:center;padding:8px;background:var(--bg2);border-radius:12px;font-size:14px;color:var(--text2)">'+(lang==='TR'?'Seri: <strong style="color:var(--orange)">'+streak+' gün 🔥</strong>':'Streak: <strong style="color:var(--orange)">'+streak+' days 🔥</strong>')+'</div></div>';
+  document.getElementById('streak-modal-body').innerHTML=h;
   document.getElementById('modal-streak').classList.add('open');
 }
 
+// ═══ STREAK FIRESTORE SYNC ═══
+async function syncStreakToFirestore(){
+  try{
+    if(!auth.currentUser)return;
+    await db.collection('users').doc(auth.currentUser.uid).set({
+      nickname:nickname,streak:streak,totalAns:totalAns,totalHearts:totalHearts,
+      best_streak:Math.max(parseInt(lsGet('oq_best_streak')||'0'),streak),
+      last_ans_date:lsGet('oq_last_ans_date')||'',
+      lang:lang,updated:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){console.warn('Streak sync:',e);}
+}
+async function loadStreakFromFirestore(){
+  try{
+    if(!auth.currentUser)return;
+    var doc=await db.collection('users').doc(auth.currentUser.uid).get();
+    if(doc.exists){
+      var d=doc.data();
+      if((d.streak||0)>streak){streak=d.streak;lsSet('oq_streak',streak);}
+      if((d.totalAns||0)>totalAns){totalAns=d.totalAns;lsSet('oq_total',totalAns);}
+      if((d.totalHearts||0)>totalHearts){totalHearts=d.totalHearts;lsSet('oq_hearts',totalHearts);}
+      if((d.best_streak||0)>parseInt(lsGet('oq_best_streak')||'0'))lsSet('oq_best_streak',d.best_streak);
+      if(d.last_ans_date&&!lsGet('oq_last_ans_date'))lsSet('oq_last_ans_date',d.last_ans_date);
+      if(d.nickname&&!nickname){nickname=d.nickname;lsSet('oq_nick',nickname);}
+      updateHdrStreak();updateSuggestVisibility();
+    }
+  }catch(e){console.warn('Load streak:',e);}
+}
+
+// ═══ GEOLOCATION ═══
+var userCity='',userCountryCode='TR';
+async function detectLocation(){
+  try{
+    if(!navigator.geolocation)return;
+    var pos=await new Promise(function(res,rej){navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000});});
+    var lat=pos.coords.latitude,lon=pos.coords.longitude;
+    var r=await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&zoom=10');
+    if(r.ok){var data=await r.json();userCity=data.address.city||data.address.town||data.address.state||'';userCountryCode=(data.address.country_code||'tr').toUpperCase();}
+  }catch(e){console.warn('Geo:',e.message);}
+}
+
 // ═══ INIT ═══
-// Block pull-to-refresh in WebView
-(function blockPullToRefresh(){
-  let startY=0;
-  document.addEventListener('touchstart',function(e){startY=e.touches[0].pageY;},{passive:true});
+// Smart pull-to-refresh blocker — only blocks pulling DOWN when at scroll top
+(function(){
+  var touchStartY=0;
+  document.addEventListener('touchstart',function(e){touchStartY=e.touches[0].clientY;},{passive:true});
   document.addEventListener('touchmove',function(e){
-    const el=e.target.closest('.scroll-body,.popup-list,.modal-body');
-    if(!el){e.preventDefault();return;}
-    if(el.scrollTop<=0&&e.touches[0].pageY>startY){e.preventDefault();}
+    var dy=e.touches[0].clientY-touchStartY;
+    if(dy<=0)return; // scrolling up = always allow
+    // Find the nearest scrollable parent
+    var el=e.target;
+    while(el&&el!==document.body){
+      if(el.scrollHeight>el.clientHeight&&el.scrollTop>0)return; // can scroll up, allow
+      el=el.parentElement;
+    }
+    // At the very top of page and pulling down = block refresh
+    e.preventDefault();
   },{passive:false});
 })();
 (function init(){
   renderObPage();buildEmojiPicker();
-  const now=new Date();const days_TR=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];const months_TR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   applyTranslations();updateHdrStreak();updateNotifUI();updateSuggestVisibility();
-  // Offline detection
   checkOnline();window.addEventListener('online',checkOnline);window.addEventListener('offline',checkOnline);
-  // Service worker for push notifications
-  registerServiceWorker();
-  setTimeout(()=>showLoading(false),5000);
-  auth.onAuthStateChanged(user=>{if(!user)auth.signInAnonymously().catch(e=>console.warn('Auth:',e));else{if(typeof Notification!=='undefined'&&Notification.permission==='granted')saveFcmToken();}});
-  setTimeout(()=>{
-    const gdpr=lsGet('oq_gdpr');
+  registerServiceWorker();detectLocation();
+  setTimeout(function(){showLoading(false);},5000);
+  auth.onAuthStateChanged(function(user){
+    if(!user)auth.signInAnonymously().catch(function(e){console.warn('Auth:',e);});
+    else{
+      if(typeof Notification!=='undefined'&&Notification.permission==='granted')saveFcmToken();
+      loadStreakFromFirestore();
+    }
+  });
+  setTimeout(function(){
+    var gdpr=lsGet('oq_gdpr');
     if(!gdpr)go('s-gdpr');
     else if(nickname){go('s-home');fetchQuestion();checkNotifications();}
     else go('s-ob');
