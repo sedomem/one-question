@@ -28,8 +28,12 @@ jobs:
           # Eğer www klasörü yoksa oluştur (Capacitor hata vermemesi için)
           mkdir -p www
 
-      - name: Capacitor Sync
+      - name: Capacitor Sync & Add Platform
         run: |
+          # Eğer android klasörü yoksa ekle, varsa sadece senkronize et
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: Keystore'u Çöz ve Hazırla
