@@ -1,7 +1,7 @@
 name: Build Signed Android AAB
 
 on:
-  workflow_dispatch: # Manuel olarak tetiklemek için
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,38 +25,41 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          # Eğer www klasörü yoksa oluştur (Capacitor hata vermemesi için)
           mkdir -p www
 
       - name: Capacitor Sync & Add Platform
         run: |
-          # Eğer android klasörü yoksa ekle, varsa sadece senkronize et
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           npx cap sync android
 
-      - name: Keystore'u Çöz ve Hazırla
-        # GitHub Secrets'taki Base64 metnini tekrar dosyaya çevirir
+      - name: Keystore'u Hazırla (Gelişmiş)
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+          # Secret'ı temizleyip ignore-garbage (-i) flag'i ile güvenli şekilde çözüyoruz
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d -i > release.keystore
+          
+          if [ ! -s release.keystore ]; then
+            echo "HATA: KEYSTORE_BASE64 secret'ı boş veya hatalı!"
+            exit 1
+          fi
+          ls -lh release.keystore
 
-      - name: Build Android AAB (Release)
+      - name: Build Android AAB
         run: |
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease
 
       - name: Sign AAB
-        # Oluşan AAB dosyasını senin sabit anahtarınla imzalar
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA256 \
             -keystore release.keystore \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -keypass ${{ secrets.KEY_PASSWORD }} \
-            android/app/build/outputs/bundle/release/app-release-unsigned.aab ${{ secrets.KEY_ALIAS }}
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            android/app/build/outputs/bundle/release/app-release-unsigned.aab \
+            "${{ secrets.KEY_ALIAS }}"
           
-          # Dosyayı imzalanmış olarak yeniden adlandır
           mv android/app/build/outputs/bundle/release/app-release-unsigned.aab android/app/build/outputs/bundle/release/one-question-signed.aab
 
       - name: Upload Signed AAB
