@@ -34,13 +34,16 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Keystore'u Hazırla (Gelişmiş)
+      - name: Keystore'u Hazırla (En Güvenli Yöntem)
         run: |
-          # Secret'ı temizleyip ignore-garbage (-i) flag'i ile güvenli şekilde çözüyoruz
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d -i > release.keystore
+          cat << 'EOF' > keystore_base64.txt
+          ${{ secrets.KEYSTORE_BASE64 }}
+          EOF
+          
+          tr -d '\n\r ' < keystore_base64.txt | base64 --decode > release.keystore
           
           if [ ! -s release.keystore ]; then
-            echo "HATA: KEYSTORE_BASE64 secret'ı boş veya hatalı!"
+            echo "HATA: release.keystore dosyası boş!"
             exit 1
           fi
           ls -lh release.keystore
@@ -55,6 +58,7 @@ jobs:
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA256 \
             -keystore release.keystore \
+            -storetype PKCS12 \
             -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -keypass "${{ secrets.KEY_PASSWORD }}" \
             android/app/build/outputs/bundle/release/app-release-unsigned.aab \
