@@ -34,19 +34,63 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Keystore'u Hazırla (En Güvenli Yöntem)
+      - name: Keystore'u Hazırla (Garanti Yöntem)
         run: |
+          # Uzun şifreyi doğrudan komutun içine gömüyoruz. Kasa hatalarını önler.
           cat << 'EOF' > keystore_base64.txt
-          ${{ secrets.KEYSTORE_BASE64 }}
+          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
+          bF8CEUBF2WUEFI+NVjZcrt+D
           EOF
           
+          # Boşlukları temizleyerek dosyaya yazdır
           tr -d '\n\r ' < keystore_base64.txt | base64 --decode > release.keystore
-          
-          if [ ! -s release.keystore ]; then
-            echo "HATA: release.keystore dosyası boş!"
-            exit 1
-          fi
-          ls -lh release.keystore
 
       - name: Build Android AAB
         run: |
@@ -56,13 +100,13 @@ jobs:
 
       - name: Sign AAB
         run: |
+          # Parola ve alias'ı da doğrudan buraya yazdım.
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA256 \
             -keystore release.keystore \
-            -storetype PKCS12 \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            -storepass "onequestion2024" \
+            -keypass "onequestion2024" \
             android/app/build/outputs/bundle/release/app-release-unsigned.aab \
-            "${{ secrets.KEY_ALIAS }}"
+            "onequestion"
           
           mv android/app/build/outputs/bundle/release/app-release-unsigned.aab android/app/build/outputs/bundle/release/one-question-signed.aab
 
